@@ -1,0 +1,129 @@
+<html>
+    <head>
+        <title>Disposamail</title>
+        
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css">
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap-theme.min.css">
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
+        <script src="/socket.io/socket.io.js"></script>
+
+        <style type="text/css">
+            .panel-headers {
+                padding-bottom: 0px;
+            }
+        </style>
+
+        <script>
+            $(document).ready(function() {
+                var socket =  io();
+                
+                socket.on('info', function(data) {
+                    console.log(data)
+
+                    $('#email-address').html(data.address);
+                });
+                
+                socket.on('message', function(data) {
+                    console.log(data)
+
+                    var $newitem = $('<div class="panel panel-primary"></div>');
+                    
+                    if (data.subject) {
+                        $newitem.append('<div class="panel-heading"><h3 class="panel-title">' + data.subject + '</h3></div>');
+                    } else {
+                        $newitem.append('<div class="panel-heading"><h3 class="panel-title">No Subject</h3></div>');
+                    }
+
+                    var $headers = $('<div class="panel-body panel-headers"></div>');
+
+                    if (data.from && data.from.length > 0) {
+                        $headers.append('<b>From:</b> ' + formatAddress(data.from[0]) + '<br />');
+                    }
+
+                    if (data.date) {
+                        $headers.append('<b>Date:</b> ' + (new Date(Date.parse(data.date))).toLocaleString() + '<br />');
+                    }
+
+                    if ($headers.html()) {
+                        $newitem.append($headers);
+                    }
+                    
+                    var $newcontent = $('<div class="panel-body"' + (data.html ? '' : ' style="white-space: pre-wrap;"') + '></div>');
+                    $newcontent.html(data.html || data.text);
+                    $newitem.append($newcontent);
+
+                    if(data.attachments && data.attachments.length > 0) {
+                        var $attachments = $('<div class="list-group"></div>');
+
+                        for (var i = 0; i < data.attachments.length; i++) {
+                            var blob = null;
+
+                            try {
+                                blob = new Blob([data.attachments[i].content], {
+                                    type: data.attachments[i].contentType
+                                });
+                            } catch (e) {
+                                var bb = new (window.WebKitBlobBuilder || window.MozBlobBuilder);
+                                bb.append(data.attachments[i].content);
+                                blob = bb.getBlob(data.attachments[i].contentType);
+                            }
+
+                            var $itemattach = $('<a href="#" class="list-group-item">' + data.attachments[i].fileName + '</a>');
+
+                            $itemattach.attr('href', (window.webkitURL || window.URL).createObjectURL(blob));
+                            $itemattach.attr('download', data.attachments[i].fileName);
+
+                            $attachments.append($itemattach);
+                        }
+
+                        $attachments.find('a').on('click', function(event) {
+                            event.stopImmediatePropagation();
+                            event.stopPropagation();
+
+                            window.open($(this).attr('href'));
+
+                            return false;
+                        });
+
+                        $newitem.append($attachments);
+                    }
+                    
+                    $newitem.insertAfter('#email-header');
+                });
+            });
+            
+            function formatAddress(item) {
+                var name = item.name;
+                var address = item.address;
+                
+                if (!name) {
+                    return address;
+                } else {
+                    return name + ' &lt;' + address + '&gt;';
+                }
+            }
+        </script>
+    </head>
+    <body>
+        <div class="container" role="main">
+            <div class="page-header">
+                <h1>Disposamail</h1>
+            </div>
+            <div class="alert alert-warning" role="alert">
+                <strong>Warning!</strong> This email address will no longer work if you referesh the page, lose your internet connection,
+                or in any way become disconnected from this website. You will, however, get a new address when you refresh the page.
+            </div>
+            <p>
+                <b>Your Email Address:</b>
+                <span id="email-address"></span>
+            </p>
+            <div class="page-header" id="email-header">
+                <h2>Email</h2>
+            </div>
+            <footer class="footer">
+                <p>&copy; 2015 <a href="http://www.petris.net/">Ryan Petris</a> - Source Available on <a href="https://gitlab.com/petris/disposamail-ext">GitLab</a>.</p>
+            </footer>
+        </div>
+    </body>
+</html>
