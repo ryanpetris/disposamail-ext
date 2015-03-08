@@ -1,8 +1,8 @@
 var fs = require('fs');
 var bodyParser = require('body-parser');
 
-var jsonParser = bodyParser.json()
-var urlencodedParser = bodyParser.urlencoded({ extended: false })
+var jsonParser = bodyParser.json({limit: '50mb'})
+var urlencodedParser = bodyParser.urlencoded({ extended: false, limit: '50mb' })
 
 function load(app, process_func) {
     console.log('[Providers] Loading Providers');

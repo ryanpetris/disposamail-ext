@@ -49,34 +49,48 @@
                         $newitem.append($headers);
                     }
                     
-                    var $newcontent = $('<div class="panel-body"' + (data.html ? '' : ' style="white-space: pre-wrap;"') + '></div>');
-                    $newcontent.html(data.html || data.text);
-                    $newitem.append($newcontent);
+                    var anyAttachments = false;
+                    var $attachments = $('<div class="list-group"></div>');
 
                     if(data.attachments && data.attachments.length > 0) {
-                        var $attachments = $('<div class="list-group"></div>');
-
                         for (var i = 0; i < data.attachments.length; i++) {
+                            var attachment = data.attachments[i];
                             var blob = null;
 
                             try {
-                                blob = new Blob([data.attachments[i].content], {
-                                    type: data.attachments[i].contentType
+                                blob = new Blob([attachment.content], {
+                                    type: attachment.contentType
                                 });
                             } catch (e) {
                                 var bb = new (window.WebKitBlobBuilder || window.MozBlobBuilder);
-                                bb.append(data.attachments[i].content);
-                                blob = bb.getBlob(data.attachments[i].contentType);
+                                bb.append(attachment.content);
+                                blob = bb.getBlob(attachment.contentType);
                             }
 
-                            var $itemattach = $('<a href="#" class="list-group-item">' + data.attachments[i].fileName + '</a>');
+                            var attachment_url = (window.webkitURL || window.URL).createObjectURL(blob);
 
-                            $itemattach.attr('href', (window.webkitURL || window.URL).createObjectURL(blob));
-                            $itemattach.attr('download', data.attachments[i].fileName);
-
-                            $attachments.append($itemattach);
+                            if (attachment.contentDisposition == 'inline') {
+                                if (data.html) {
+                                    data.html = data.html.replace('cid:' + attachment.contentId, attachment_url);
+                                }
+                            } else {
+                                anyAttachments = true;
+                                
+                                var $itemattach = $('<a href="#" class="list-group-item">' + attachment.fileName + '</a>');
+    
+                                $itemattach.attr('href', attachment_url);
+                                $itemattach.attr('download', attachment.fileName);
+    
+                                $attachments.append($itemattach);
+                            }
                         }
-
+                    }
+                    
+                    var $newcontent = $('<div class="panel-body"' + (data.html ? '' : ' style="white-space: pre-wrap;"') + '></div>');
+                    $newcontent.html(data.html || data.text);
+                    $newitem.append($newcontent);
+                    
+                    if (anyAttachments) {
                         $attachments.find('a').on('click', function(event) {
                             event.stopImmediatePropagation();
                             event.stopPropagation();
@@ -88,7 +102,7 @@
 
                         $newitem.append($attachments);
                     }
-                    
+
                     $newitem.insertAfter('#email-header');
                 });
             });
